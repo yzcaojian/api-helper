@@ -12,6 +12,8 @@ export function RequestBar() {
   const setMethod = useAppStore((s) => s.setMethod);
   const setUrl = useAppStore((s) => s.setUrl);
   const handlePrimaryAction = useAppStore((s) => s.handlePrimaryAction);
+  const sendWebSocketMessage = useAppStore((s) => s.sendWebSocketMessage);
+  const disconnectWebSocket = useAppStore((s) => s.disconnectWebSocket);
 
   const isWs = protocol === "websocket";
   const wsConnected = wsStatus === "connected";
@@ -54,17 +56,20 @@ export function RequestBar() {
                   : "未连接"}
           </span>
         )}
-        <Button variant="primary" disabled={loading && !wsConnected} onClick={() => void handlePrimaryAction()}>
-          {loading && !wsConnected
-            ? isWs
-              ? "连接中…"
-              : "请求中…"
-            : isWs
-              ? wsConnected
-                ? "断开"
-                : "连接"
-              : "发送"}
-        </Button>
+        {isWs && wsConnected ? (
+          <>
+            <Button variant="primary" onClick={() => void sendWebSocketMessage()}>
+              发送
+            </Button>
+            <Button variant="secondary" onClick={() => void disconnectWebSocket()}>
+              断开
+            </Button>
+          </>
+        ) : (
+          <Button variant="primary" disabled={loading} onClick={() => void handlePrimaryAction()}>
+            {loading ? (isWs ? "连接中…" : "请求中…") : isWs ? "连接" : "发送"}
+          </Button>
+        )}
       </div>
     </div>
   );

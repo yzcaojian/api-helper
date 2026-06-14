@@ -41,13 +41,17 @@ export function ConfigPanel() {
   const setScriptEnabled = useAppStore((s) => s.setScriptEnabled);
   const setScriptCode = useAppStore((s) => s.setScriptCode);
   const runScriptOnly = useAppStore((s) => s.runScriptOnly);
+  const wsInput = useAppStore((s) => s.wsInput);
+  const wsStatus = useAppStore((s) => s.wsStatus);
+  const setWsInput = useAppStore((s) => s.setWsInput);
+  const sendWebSocketMessage = useAppStore((s) => s.sendWebSocketMessage);
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <ConfigTabs
         active={configTab}
         onChange={setConfigTab}
-        hideBody={protocol === "websocket"}
+        bodyLabel={protocol === "websocket" ? "消息" : "Body"}
       />
       <div className="min-h-0 flex-1 overflow-auto p-4">
         {configTab === "params" && (
@@ -67,6 +71,24 @@ export function ConfigPanel() {
               在 Value 中使用 {"{{变量名}}"} 引用环境变量或预执行脚本输出
             </p>
           </>
+        )}
+
+        {configTab === "body" && protocol === "websocket" && (
+          <div className="space-y-3">
+            <CodeEditor value={wsInput} onChange={setWsInput} language="json" minHeight="260px" />
+            <p className="text-xs text-[var(--text-tertiary)]">
+              连接后发送此消息内容，支持 {"{{变量}}"}。快捷键 Ctrl+Enter 发送。
+            </p>
+            <div className="flex justify-end">
+              <Button
+                variant="primary"
+                disabled={wsStatus !== "connected"}
+                onClick={() => void sendWebSocketMessage()}
+              >
+                发送消息
+              </Button>
+            </div>
+          </div>
         )}
 
         {configTab === "body" && protocol === "http" && method !== "POST" && (

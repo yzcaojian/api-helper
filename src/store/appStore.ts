@@ -206,6 +206,7 @@ function collectUsedIn(name: string, state: AppState): string[] {
     if (extractVariableNames(h.value).includes(name)) places.push("Header");
   }
   if (extractVariableNames(state.bodyContent).includes(name)) places.push("Body");
+  if (extractVariableNames(state.wsInput).includes(name)) places.push("消息");
   return [...new Set(places)];
 }
 
@@ -433,6 +434,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setProtocol: (protocol) =>
     set((s) => ({
       protocol,
+      configTab: protocol === "websocket" ? "body" : s.configTab,
       response: protocol === "websocket" ? null : s.response,
       wsError: protocol === "http" ? null : s.wsError,
       url:
@@ -500,6 +502,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       ...state.params.flatMap((p) => extractVariableNames(`${p.key}${p.value}`)),
       ...state.headers.flatMap((h) => extractVariableNames(h.value)),
       ...extractVariableNames(state.bodyContent),
+      ...extractVariableNames(state.wsInput),
     ]);
 
     return [...names].map((name) => ({
@@ -584,7 +587,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     try {
       const sessionId = await wsConnect(ctx.resolvedUrl, ctx.headers);
-      set({ wsSessionId: sessionId });
+      set({ wsSessionId: sessionId, wsStatus: "connected", loading: false, wsError: null });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const friendly = message.includes("200 OK")
@@ -608,9 +611,26 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   sendWebSocketMessage: async (text) => {
     const state = get();
-    const message = (text ?? state.wsInput).trim();
-    if (!message || state.wsStatus !== "connected" || !state.wsSessionId) return;
+    const raw = (text ?? state.wsInput).trim();
+    if (!raw) {
+      set({ wsError: "消息内容不能为空" });
+      return;
+    }
+    if (state.wsStatus !== "connected" || !state.wsSessionId) {
+      set({ wsError: "请先连接 WebSocket" });
+      return;
+    }
 
+    const ctx = await get().prepareRequestContext();
+    const variables = ctx.ok ? ctx.variables : get().getMergedVariables();
+    const message = substituteVariables(raw, variables);
+    const missing = hasUnresolvedVariables(message, variables);
+    if (missing.length > 0) {
+      set({ wsError: `未定义变量: ${[...new Set(missing)].join(", ")}` });
+      return;
+    }
+
+    set({ wsError: null });
     try {
       await wsSend(state.wsSessionId, message);
     } catch (err) {
@@ -623,7 +643,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const state = get();
     if (state.protocol === "websocket") {
       if (state.wsStatus === "connected") {
-        await get().disconnectWebSocket();
+        await get().sendWebSocketMessage();
       } else {
         await get().connectWebSocket();
       }

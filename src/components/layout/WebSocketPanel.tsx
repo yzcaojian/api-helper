@@ -72,12 +72,16 @@ export function WebSocketPanel() {
           value={wsInput}
           onChange={(e) => setWsInput(e.target.value)}
           onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void sendWebSocketMessage();
+            }
             if (e.ctrlKey && e.key === "Enter") {
               e.preventDefault();
               void sendWebSocketMessage();
             }
           }}
-          placeholder='{"type":"ping"}'
+          placeholder="与上方「消息」标签同步，Enter 发送"
           disabled={wsStatus !== "connected"}
           className="h-9 min-w-0 flex-1 rounded-md border border-border bg-surface px-3 font-mono text-sm focus:border-accent focus:outline-none disabled:opacity-50"
         />
