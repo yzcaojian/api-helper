@@ -57,29 +57,18 @@ export function ConfigPanel() {
       <ConfigTabs active={configTab} onChange={setConfigTab} />
       <div className="min-h-0 flex-1 overflow-auto p-4">
         {configTab === "params" && (
-          <>
-            <KeyValueTable rows={params} onChange={setParams} keyLabel="键" valueLabel="值" />
-            <p className="mt-3 text-xs text-[var(--text-tertiary)]">
-              参数会拼接到 URL 查询字符串，例如 <code className="font-mono">?id=1&amp;name=test</code>。
-              最终地址 = URL + 参数，支持 {"{{变量}}"}。
-            </p>
-          </>
+          <KeyValueTable rows={params} onChange={setParams} keyLabel="键" valueLabel="值" />
         )}
 
         {configTab === "headers" && (
-          <>
-            <KeyValueTable rows={headers} onChange={setHeaders} keyLabel="名称" valueLabel="值" />
-            <p className="mt-3 text-xs text-[var(--text-tertiary)]">
-              在值中使用 {"{{变量名}}"} 引用环境变量或预执行脚本输出
-            </p>
-          </>
+          <KeyValueTable rows={headers} onChange={setHeaders} keyLabel="名称" valueLabel="值" />
         )}
 
         {configTab === "body" && !canEditBody && (
           <div className="rounded-md border border-border-subtle bg-surface-editor p-6 text-center">
             <p className="text-sm text-[var(--text-secondary)]">GET 请求不包含请求体</p>
             <Button variant="primary" className="mt-3" onClick={() => setMethod("POST")}>
-              切换为 POST 以编辑请求体
+              切换为 POST
             </Button>
           </div>
         )}
@@ -100,11 +89,6 @@ export function ConfigPanel() {
             {bodyType !== "none" && (
               <CodeEditor value={bodyContent} onChange={setBodyContent} language="json" minHeight="260px" />
             )}
-            <p className="text-xs text-[var(--text-tertiary)]">
-              {isWs
-                ? "连接后在顶部点击「发送」下发此内容，支持 {{变量}}，快捷键 Ctrl+Enter。"
-                : "POST 请求体，支持 {{变量}}。"}
-            </p>
           </div>
         )}
 
@@ -116,12 +100,12 @@ export function ConfigPanel() {
                 checked={scriptEnabled}
                 onChange={(e) => setScriptEnabled(e.target.checked)}
               />
-              发送前执行此脚本
+              发送前执行
             </label>
             <CodeEditor value={scriptCode} onChange={setScriptCode} language="javascript" minHeight="280px" />
             <div className="flex justify-end">
-              <Button variant="primary" onClick={() => void runScriptOnly()}>
-                运行脚本
+              <Button variant="secondary" onClick={() => void runScriptOnly()}>
+                试运行
               </Button>
             </div>
           </div>
@@ -147,7 +131,7 @@ export function ConfigPanel() {
                         ? maskSecret(v.value)
                         : v.value || "—"}
                     </td>
-                    <td className="px-3 py-2">{v.source === "script" ? "预执行脚本" : "环境"}</td>
+                    <td className="px-3 py-2">{v.source === "script" ? "脚本" : "环境"}</td>
                     <td className="px-3 py-2">{v.usedIn.join("、") || "—"}</td>
                   </tr>
                 ))}

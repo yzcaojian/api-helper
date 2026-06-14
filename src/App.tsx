@@ -6,8 +6,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { HistorySidebar } from "@/components/layout/HistorySidebar";
 import { RequestBar } from "@/components/layout/RequestBar";
 import { ConfigPanel } from "@/components/layout/ConfigPanel";
-import { ResponsePanel } from "@/components/layout/ResponsePanel";
-import { WebSocketPanel } from "@/components/layout/WebSocketPanel";
+import { ResultPanel } from "@/components/layout/ResultPanel";
 import { StatusBar } from "@/components/layout/StatusBar";
 import { EnvDrawer } from "@/components/drawers/EnvDrawer";
 import { SettingsDialog } from "@/components/settings/SettingsDialog";
@@ -39,12 +38,10 @@ function useThemeEffect() {
 }
 
 function SplitWorkspace() {
-  const protocol = useAppStore((s) => s.protocol);
   const split = useAppStore((s) => s.responseSplit);
   const setResponseSplit = useAppStore((s) => s.setResponseSplit);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
-  const isWs = protocol === "websocket";
 
   useEffect(() => {
     if (!dragging) return;
@@ -78,7 +75,7 @@ function SplitWorkspace() {
         className="h-1 shrink-0 cursor-row-resize bg-border-subtle hover:bg-accent"
       />
       <div style={{ height: `${100 - split}%` }} className="flex min-h-0 flex-col">
-        {isWs ? <WebSocketPanel /> : <ResponsePanel />}
+        <ResultPanel />
       </div>
     </div>
   );

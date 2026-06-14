@@ -4,8 +4,8 @@ const TABS: Array<{ id: ConfigTab; label: string }> = [
   { id: "params", label: "参数" },
   { id: "headers", label: "请求头" },
   { id: "body", label: "请求体" },
-  { id: "script", label: "预执行脚本" },
-  { id: "variables", label: "变量预览" },
+  { id: "script", label: "脚本" },
+  { id: "variables", label: "变量" },
 ];
 
 interface TabsProps {

@@ -253,7 +253,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loading: false,
   history: [],
   historyFilter: "all",
-  responseSplit: 45,
+  responseSplit: 38,
   wsStatus: "idle",
   wsError: null,
   wsSessionId: null,

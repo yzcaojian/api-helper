@@ -19,7 +19,7 @@ export function RequestBar() {
   const wsConnected = wsStatus === "connected";
 
   return (
-    <div className="relative z-20 border-b border-border-subtle px-4 py-2.5">
+    <div className="relative z-20 border-b border-border-subtle px-4 py-2">
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={protocol}

@@ -1,11 +1,8 @@
 import { useRef } from "react";
-import { useMemo } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { useAppStore } from "@/store/appStore";
 import { Button } from "@/components/ui/Button";
 import { DropdownSelect } from "@/components/ui/DropdownSelect";
 import { ActionMenu } from "@/components/ui/ActionMenu";
-import { Pill } from "@/components/ui/Pill";
 
 async function notify(result: { ok: boolean; message: string }) {
   if (result.message === "已取消" || result.message === "已取消保存") return;
@@ -16,31 +13,16 @@ export function TopBar() {
   const fileRef = useRef<HTMLInputElement>(null);
   const environments = useAppStore((s) => s.environments);
   const activeEnvId = useAppStore((s) => s.activeEnvId);
+  const sidebarOpen = useAppStore((s) => s.sidebarOpen);
   const setActiveEnvId = useAppStore((s) => s.setActiveEnvId);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
   const setEnvDrawerOpen = useAppStore((s) => s.setEnvDrawerOpen);
   const setSettingsOpen = useAppStore((s) => s.setSettingsOpen);
-  const setConfigTab = useAppStore((s) => s.setConfigTab);
   const importFromJson = useAppStore((s) => s.importFromJson);
   const importFromFile = useAppStore((s) => s.importFromFile);
   const exportPostman = useAppStore((s) => s.exportPostman);
   const exportApipost = useAppStore((s) => s.exportApipost);
   const exportEnvironments = useAppStore((s) => s.exportEnvironments);
-
-  const variableDeps = useAppStore(
-    useShallow((s) => ({
-      url: s.url,
-      params: s.params,
-      headers: s.headers,
-      bodyContent: s.bodyContent,
-      runtimeVars: s.runtimeVars,
-      activeEnvId: s.activeEnvId,
-      environments: s.environments,
-    })),
-  );
-  const varCount = useMemo(() => {
-    return useAppStore.getState().getResolvedVariables().filter((v) => v.value).length;
-  }, [variableDeps]);
 
   const onImportFile = async (file: File) => {
     const text = await file.text();
@@ -48,28 +30,18 @@ export function TopBar() {
   };
 
   return (
-    <header className="relative z-20 flex h-12 shrink-0 items-center gap-3 border-b border-border-subtle bg-surface-elevated px-4">
+    <header className="relative z-20 flex h-11 shrink-0 items-center gap-2 border-b border-border-subtle bg-surface-elevated px-4">
       <div className="text-sm font-semibold">API Helper</div>
-      <div className="h-6 w-px bg-border-subtle" />
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-[var(--text-secondary)]">环境</span>
-        <DropdownSelect
-          ariaLabel="选择环境"
-          value={activeEnvId}
-          onChange={setActiveEnvId}
-          options={environments.map((e) => ({ value: e.id, label: e.name }))}
-        />
-        <Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => setEnvDrawerOpen(true)}>
-          管理变量
-        </Button>
-      </div>
-      <button
-        type="button"
-        onClick={() => setConfigTab("variables")}
-        className="rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-      >
-        <Pill tone="info">变量 {varCount}</Pill>
-      </button>
+      <div className="h-5 w-px bg-border-subtle" />
+      <DropdownSelect
+        ariaLabel="选择环境"
+        value={activeEnvId}
+        onChange={setActiveEnvId}
+        options={environments.map((e) => ({ value: e.id, label: e.name }))}
+      />
+      <Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => setEnvDrawerOpen(true)}>
+        环境变量
+      </Button>
       <div className="flex-1" />
       <input
         ref={fileRef}
@@ -106,10 +78,10 @@ export function TopBar() {
           },
         ]}
       />
-      <Button variant="ghost" onClick={toggleSidebar}>
+      <Button variant={sidebarOpen ? "secondary" : "ghost"} className="h-8" onClick={toggleSidebar}>
         历史
       </Button>
-      <Button variant="ghost" onClick={() => setSettingsOpen(true)}>
+      <Button variant="ghost" className="h-8" onClick={() => setSettingsOpen(true)}>
         设置
       </Button>
     </header>

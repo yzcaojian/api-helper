@@ -1,6 +1,6 @@
 [package]
 name = "api-helper"
-version = "0.1.6"
+version = "0.1.7"
 description = "Lightweight API debugging tool for Windows"
 authors = ["API Helper"]
 edition = "2021"
