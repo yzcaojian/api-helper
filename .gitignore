@@ -7,3 +7,4 @@ Thumbs.db
 src-tauri/target/
 tsconfig.tsbuildinfo
 .commit-msg.txt
+.tmp/

@@ -20,7 +20,8 @@ export default {
         },
       },
       fontFamily: {
-        mono: ["JetBrains Mono", "Consolas", "monospace"],
+        mono: ["Cascadia Code", "Consolas", "JetBrains Mono", "monospace"],
+        sans: ["Segoe UI", "system-ui", "-apple-system", "sans-serif"],
       },
     },
   },

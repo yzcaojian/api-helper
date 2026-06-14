@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/fix-tauri-html.mjs",
     "preview": "vite preview",
     "tauri": "tauri"
   },
@@ -13,6 +13,8 @@
     "@codemirror/lang-javascript": "^6.2.4",
     "@codemirror/lang-json": "^6.0.2",
     "@tauri-apps/api": "^2.4.0",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-store": "^2.2.0",
     "@uiw/react-codemirror": "^4.23.12",
     "react": "^19.0.0",
@@ -21,11 +23,11 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.4.0",
+    "@types/node": "^22.13.10",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.21",
-    "@types/node": "^22.13.10",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.2",

@@ -18,7 +18,9 @@ export function CodeEditor({ value, onChange, language = "javascript", minHeight
         value={value}
         height={minHeight}
         extensions={extensions}
-        onChange={onChange}
+        onChange={(next) => {
+          if (next !== value) onChange(next);
+        }}
         basicSetup={{
           lineNumbers: true,
           foldGutter: true,

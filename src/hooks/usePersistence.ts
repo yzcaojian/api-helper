@@ -23,9 +23,8 @@ export function usePersistence() {
   }, []);
 
   useEffect(() => {
-    const unsub = useAppStore.subscribe((state, prev) => {
+    const unsub = useAppStore.subscribe((state) => {
       if (!hydrated.current) return;
-      if (state === prev) return;
       void persist(state);
     });
 
@@ -34,6 +33,7 @@ export function usePersistence() {
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let lastSaved = "";
 
 function persist(state: ReturnType<typeof useAppStore.getState>) {
   if (saveTimer) clearTimeout(saveTimer);
@@ -59,6 +59,9 @@ function persist(state: ReturnType<typeof useAppStore.getState>) {
         wsInput: state.wsInput,
       },
     };
+    const serialized = JSON.stringify(snapshot);
+    if (serialized === lastSaved) return;
+    lastSaved = serialized;
     void saveSnapshot(snapshot);
   }, 400);
 }

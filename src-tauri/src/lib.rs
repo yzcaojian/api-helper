@@ -98,6 +98,8 @@ fn format_network_error(err: reqwest::Error) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .manage(ws::WsState::new())
         .invoke_handler(tauri::generate_handler![
             send_http_request,

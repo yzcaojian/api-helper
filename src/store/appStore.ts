@@ -20,12 +20,31 @@ import { sendHttpRequest } from "@/lib/http";
 import { runPreRequestScript } from "@/lib/preScript";
 import type { PersistedSnapshot } from "@/lib/storage";
 import { wsConnect, wsDisconnect, wsSend } from "@/lib/ws";
+import { pickJsonFile, saveJsonFile } from "@/lib/files";
+import type { ImportedRequest } from "@/lib/importExport";
+import {
+  exportApipostProject,
+  exportEnvironmentsJson,
+  exportPostmanCollection,
+  parseImportFile,
+} from "@/lib/importExport";
 import {
   extractVariableNames,
   formatTime,
   hasUnresolvedVariables,
   substituteVariables,
 } from "@/lib/utils";
+
+function assertWebSocketUrl(url: string): string | null {
+  const trimmed = url.trim();
+  if (!trimmed.startsWith("ws://") && !trimmed.startsWith("wss://")) {
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return "WebSocket 地址不能使用 http/https，请改为 ws:// 或 wss://";
+    }
+    return "WebSocket 地址须以 ws:// 或 wss:// 开头";
+  }
+  return null;
+}
 
 const DEFAULT_ENVS: Environment[] = [
   {
@@ -80,6 +99,7 @@ interface AppState {
   response: HttpResponse | null;
   loading: boolean;
   history: HistoryItem[];
+  historyFilter: "all" | "favorites";
   responseSplit: number;
   wsStatus: WsConnectionStatus;
   wsError: string | null;
@@ -91,9 +111,21 @@ interface AppState {
   toggleSidebar: () => void;
   setEnvDrawerOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
+  setHistoryFilter: (filter: "all" | "favorites") => void;
+  toggleHistoryFavorite: (id: string) => void;
+  applyHistoryItem: (item: HistoryItem) => void;
   setActiveEnvId: (id: string) => void;
   updateEnvVariable: (envId: string, key: string, value: string) => void;
+  updateEnvVariableKey: (envId: string, oldKey: string, newKey: string) => void;
+  removeEnvVariable: (envId: string, key: string) => void;
   addEnvVariable: (envId: string) => void;
+  applyImportedRequest: (request: ImportedRequest) => void;
+  importFromJson: (text: string) => { ok: boolean; message: string };
+  importFromFile: () => Promise<{ ok: boolean; message: string }>;
+  exportPostman: () => Promise<{ ok: boolean; message: string }>;
+  exportApipost: () => Promise<{ ok: boolean; message: string }>;
+  exportEnvironments: () => Promise<{ ok: boolean; message: string }>;
+  recordWsHistory: (status: string, error?: string) => void;
   setProtocol: (protocol: Protocol) => void;
   setMethod: (method: HttpMethod) => void;
   setUrl: (url: string) => void;
@@ -218,6 +250,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   response: null,
   loading: false,
   history: [],
+  historyFilter: "all",
   responseSplit: 45,
   wsStatus: "idle",
   wsError: null,
@@ -229,6 +262,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setEnvDrawerOpen: (open) => set({ envDrawerOpen: open }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
+  setHistoryFilter: (historyFilter) => set({ historyFilter }),
+  toggleHistoryFavorite: (id) =>
+    set((s) => ({
+      history: s.history.map((item) =>
+        item.id === id ? { ...item, favorite: !item.favorite } : item,
+      ),
+    })),
+  applyHistoryItem: (item) =>
+    set({
+      protocol: item.protocol,
+      method: item.method ?? "GET",
+      url: item.url,
+      configTab: item.protocol === "websocket" ? "headers" : item.method === "POST" ? "body" : "headers",
+    }),
   setActiveEnvId: (id) => set({ activeEnvId: id }),
   updateEnvVariable: (envId, key, value) =>
     set((s) => ({
@@ -244,17 +291,162 @@ export const useAppStore = create<AppState>((set, get) => ({
           : env,
       ),
     })),
+  updateEnvVariableKey: (envId, oldKey, newKey) =>
+    set((s) => ({
+      environments: s.environments.map((env) => {
+        if (env.id !== envId || oldKey === newKey) return env;
+        const next = { ...env.variables };
+        const val = next[oldKey] ?? "";
+        delete next[oldKey];
+        if (newKey.trim()) next[newKey.trim()] = val;
+        return { ...env, variables: next };
+      }),
+    })),
+  removeEnvVariable: (envId, key) =>
+    set((s) => ({
+      environments: s.environments.map((env) => {
+        if (env.id !== envId) return env;
+        const next = { ...env.variables };
+        delete next[key];
+        return { ...env, variables: next };
+      }),
+    })),
+  applyImportedRequest: (request) =>
+    set({
+      protocol: request.protocol,
+      method: request.method ?? "GET",
+      url: request.url,
+      params: request.params.length > 0 ? request.params : [createKeyValue()],
+      headers: request.headers.length > 0 ? request.headers : [createKeyValue()],
+      bodyType: request.bodyType,
+      bodyContent: request.bodyContent,
+      scriptCode: request.scriptCode || DEFAULT_SCRIPT,
+      configTab: request.protocol === "websocket" ? "headers" : "params",
+    }),
+  importFromJson: (text) => {
+    try {
+      const result = parseImportFile(text);
+      let message = `已从 ${result.source} 格式导入`;
+      if (result.environments.length > 0) {
+        const merged = result.environments.map((e, i) => ({
+          ...e,
+          id: `${e.id}_${i}_${Date.now()}`,
+        }));
+        set((s) => ({
+          environments: [...s.environments, ...merged],
+          activeEnvId: merged[0].id,
+        }));
+        message += ` ${merged.length} 套环境`;
+      }
+      if (result.requests.length > 0) {
+        get().applyImportedRequest(result.requests[0]);
+        const historyItems: HistoryItem[] = result.requests.map((r) => ({
+          id: crypto.randomUUID(),
+          protocol: r.protocol,
+          method: r.method,
+          url: r.url,
+          status: "导入",
+          time: formatTime(),
+          favorite: false,
+        }));
+        set((s) => ({ history: [...historyItems, ...s.history].slice(0, 100) }));
+        message += ` ${result.requests.length} 条接口`;
+      }
+      if (result.environments.length === 0 && result.requests.length === 0) {
+        return { ok: false, message: "未识别到可导入的环境或接口" };
+      }
+      return { ok: true, message };
+    } catch (err) {
+      return { ok: false, message: err instanceof Error ? err.message : "JSON 解析失败" };
+    }
+  },
+  importFromFile: async () => {
+    const text = await pickJsonFile();
+    if (text === null) {
+      return { ok: false, message: "已取消" };
+    }
+    return get().importFromJson(text);
+  },
+  exportPostman: async () => {
+    const s = get();
+    const ok = await saveJsonFile(
+      "api-helper-postman.json",
+      exportPostmanCollection({
+        name: "API Helper",
+        url: s.url,
+        method: s.method,
+        params: s.params,
+        headers: s.headers,
+        bodyType: s.bodyType,
+        bodyContent: s.bodyContent,
+        scriptCode: s.scriptCode,
+        environments: s.environments,
+        history: s.history,
+      }),
+    );
+    return ok
+      ? { ok: true, message: "Postman 集合已保存" }
+      : { ok: false, message: "已取消保存" };
+  },
+  exportApipost: async () => {
+    const s = get();
+    const ok = await saveJsonFile(
+      "api-helper-apipost.json",
+      exportApipostProject({
+        name: "API Helper",
+        url: s.url,
+        method: s.method,
+        params: s.params,
+        headers: s.headers,
+        bodyContent: s.bodyContent,
+        environments: s.environments,
+      }),
+    );
+    return ok
+      ? { ok: true, message: "Apipost 项目已保存" }
+      : { ok: false, message: "已取消保存" };
+  },
+  exportEnvironments: async () => {
+    const ok = await saveJsonFile(
+      "api-helper-environments.json",
+      exportEnvironmentsJson(get().environments),
+    );
+    return ok
+      ? { ok: true, message: "环境变量已保存" }
+      : { ok: false, message: "已取消保存" };
+  },
+  recordWsHistory: (status, error) => {
+    const state = get();
+    set({
+      history: [
+        {
+          id: crypto.randomUUID(),
+          protocol: "websocket",
+          url: state.url,
+          status: error ? `${status}: ${error}` : status,
+          time: formatTime(),
+        },
+        ...state.history.slice(0, 99),
+      ],
+    });
+  },
   setProtocol: (protocol) =>
     set((s) => ({
       protocol,
+      response: protocol === "websocket" ? null : s.response,
+      wsError: protocol === "http" ? null : s.wsError,
       url:
         protocol === "websocket" && s.url.includes("/get")
           ? "wss://{{wsHost}}"
-          : protocol === "http" && s.url.startsWith("ws")
+          : protocol === "http" && (s.url.startsWith("ws") || s.url.startsWith("wss"))
             ? "{{baseUrl}}/get"
             : s.url,
     })),
-  setMethod: (method) => set({ method }),
+  setMethod: (method) =>
+    set((s) => ({
+      method,
+      configTab: method === "GET" && s.configTab === "body" ? "headers" : s.configTab,
+    })),
   setUrl: (url) => set({ url }),
   setParams: (params) => set({ params }),
   setHeaders: (headers) => set({ headers }),
@@ -262,7 +454,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   setBodyContent: (bodyContent) => set({ bodyContent }),
   setScriptEnabled: (scriptEnabled) => set({ scriptEnabled }),
   setScriptCode: (scriptCode) => set({ scriptCode }),
-  setConfigTab: (configTab) => set({ configTab }),
+  setConfigTab: (configTab) => {
+    const state = get();
+    if (configTab === "body" && state.protocol === "http" && state.method === "GET") {
+      set({ method: "POST", configTab: "body" });
+      return;
+    }
+    set({ configTab });
+  },
   setResponseTab: (responseTab) => set({ responseTab }),
   setResponseSplit: (responseSplit) => set({ responseSplit }),
   setWsInput: (wsInput) => set({ wsInput }),
@@ -368,31 +567,31 @@ export const useAppStore = create<AppState>((set, get) => ({
     const state = get();
     if (state.wsStatus === "connected" || state.loading) return;
 
-    set({ loading: true, wsError: null, wsStatus: "connecting" });
+    set({ loading: true, wsError: null, wsStatus: "connecting", response: null });
     const ctx = await get().prepareRequestContext();
     if (!ctx.ok) {
       set({ loading: false, wsStatus: "error", wsError: "变量或脚本未就绪" });
+      get().recordWsHistory("失败", "变量或脚本未就绪");
+      return;
+    }
+
+    const urlError = assertWebSocketUrl(ctx.resolvedUrl);
+    if (urlError) {
+      set({ loading: false, wsStatus: "error", wsError: urlError, wsSessionId: null });
+      get().recordWsHistory("失败", urlError);
       return;
     }
 
     try {
       const sessionId = await wsConnect(ctx.resolvedUrl, ctx.headers);
-      set({
-        wsSessionId: sessionId,
-        history: [
-          {
-            id: crypto.randomUUID(),
-            protocol: "websocket",
-            url: state.url,
-            status: "已连接",
-            time: formatTime(),
-          },
-          ...state.history.slice(0, 99),
-        ],
-      });
+      set({ wsSessionId: sessionId });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      set({ loading: false, wsStatus: "error", wsError: message, wsSessionId: null });
+      const friendly = message.includes("200 OK")
+        ? "服务器返回 HTTP 200 而非 WebSocket 握手（101），请确认地址为 ws:// 或 wss://"
+        : message;
+      set({ loading: false, wsStatus: "error", wsError: friendly, wsSessionId: null });
+      get().recordWsHistory("失败", friendly);
     }
   },
 
@@ -452,15 +651,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     let body: string | undefined;
-    if (state.method === "POST" && state.bodyType === "json") {
-      body = substituteVariables(state.bodyContent, ctx.variables);
+    if (state.method === "POST" && state.bodyType !== "none") {
+      if (state.bodyType === "json" || state.bodyType === "raw") {
+        body = substituteVariables(state.bodyContent, ctx.variables);
+      }
+    }
+
+    const headers = { ...ctx.headers };
+    if (state.method === "POST" && body && !Object.keys(headers).some((k) => k.toLowerCase() === "content-type")) {
+      headers["Content-Type"] =
+        state.bodyType === "json" ? "application/json" : "text/plain";
     }
 
     try {
       const response = await sendHttpRequest({
         method: state.method,
         url: ctx.resolvedUrl,
-        headers: ctx.headers,
+        headers,
         body,
       });
       set({

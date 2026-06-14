@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useAppStore } from "@/store/appStore";
 import { ConfigTabs } from "@/components/ui/ConfigTabs";
 import { KeyValueTable } from "@/components/ui/KeyValueTable";
@@ -15,8 +17,23 @@ export function ConfigPanel() {
   const bodyContent = useAppStore((s) => s.bodyContent);
   const scriptEnabled = useAppStore((s) => s.scriptEnabled);
   const scriptCode = useAppStore((s) => s.scriptCode);
-  const variables = useAppStore((s) => s.getResolvedVariables());
+  const variableDeps = useAppStore(
+    useShallow((s) => ({
+      url: s.url,
+      params: s.params,
+      headers: s.headers,
+      bodyContent: s.bodyContent,
+      runtimeVars: s.runtimeVars,
+      activeEnvId: s.activeEnvId,
+      environments: s.environments,
+    })),
+  );
+  const variables = useMemo(
+    () => useAppStore.getState().getResolvedVariables(),
+    [variableDeps],
+  );
   const setConfigTab = useAppStore((s) => s.setConfigTab);
+  const setMethod = useAppStore((s) => s.setMethod);
   const setParams = useAppStore((s) => s.setParams);
   const setHeaders = useAppStore((s) => s.setHeaders);
   const setBodyType = useAppStore((s) => s.setBodyType);
@@ -30,11 +47,17 @@ export function ConfigPanel() {
       <ConfigTabs
         active={configTab}
         onChange={setConfigTab}
-        hideBody={protocol === "websocket" || method === "GET"}
+        hideBody={protocol === "websocket"}
       />
       <div className="min-h-0 flex-1 overflow-auto p-4">
         {configTab === "params" && (
-          <KeyValueTable rows={params} onChange={setParams} keyLabel="Key" valueLabel="Value" />
+          <>
+            <KeyValueTable rows={params} onChange={setParams} keyLabel="Key" valueLabel="Value" />
+            <p className="mt-3 text-xs text-[var(--text-tertiary)]">
+              Params 会拼接到 URL 查询字符串，例如 <code className="font-mono">?id=1&amp;name=test</code>。
+              最终请求地址 = URL + Params，支持 {"{{变量}}"}。
+            </p>
+          </>
         )}
 
         {configTab === "headers" && (
@@ -44,6 +67,15 @@ export function ConfigPanel() {
               在 Value 中使用 {"{{变量名}}"} 引用环境变量或预执行脚本输出
             </p>
           </>
+        )}
+
+        {configTab === "body" && protocol === "http" && method !== "POST" && (
+          <div className="rounded-md border border-border-subtle bg-surface-editor p-6 text-center">
+            <p className="text-sm text-[var(--text-secondary)]">GET 请求不包含 Body</p>
+            <Button variant="primary" className="mt-3" onClick={() => setMethod("POST")}>
+              切换为 POST 以编辑 Body
+            </Button>
+          </div>
         )}
 
         {configTab === "body" && method === "POST" && (

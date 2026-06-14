@@ -10,7 +10,7 @@ export function Select({ value, onChange, options, className = "" }: SelectProps
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`h-9 rounded-md border border-border bg-surface-elevated px-2 text-sm text-[var(--text-primary)] focus:border-accent focus:outline-none ${className}`}
+      className={`relative z-10 h-9 rounded-md border border-border bg-surface-elevated px-2 text-sm text-[var(--text-primary)] focus:border-accent focus:outline-none ${className}`}
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>
