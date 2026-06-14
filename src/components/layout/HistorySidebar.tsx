@@ -8,18 +8,34 @@ export function HistorySidebar() {
   const setHistoryFilter = useAppStore((s) => s.setHistoryFilter);
   const applyHistoryItem = useAppStore((s) => s.applyHistoryItem);
   const toggleHistoryFavorite = useAppStore((s) => s.toggleHistoryFavorite);
+  const removeHistoryItem = useAppStore((s) => s.removeHistoryItem);
+  const clearHistory = useAppStore((s) => s.clearHistory);
 
   const filtered =
     historyFilter === "favorites" ? history.filter((item) => item.favorite) : history;
 
+  const onClearHistory = () => {
+    if (history.length === 0) return;
+    if (window.confirm("确定清空全部历史记录？")) {
+      clearHistory();
+    }
+  };
+
   return (
     <aside className="relative z-10 flex w-[220px] shrink-0 flex-col border-r border-border-subtle bg-surface-elevated">
       <div className="border-b border-border-subtle p-3">
-        <input
-          type="search"
-          placeholder="搜索请求…"
-          className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm focus:border-accent focus:outline-none"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="search"
+            placeholder="搜索请求…"
+            className="h-9 min-w-0 flex-1 rounded-md border border-border bg-surface px-3 text-sm focus:border-accent focus:outline-none"
+          />
+          {history.length > 0 && (
+            <Button variant="ghost" className="h-9 shrink-0 px-2 text-xs" onClick={onClearHistory}>
+              清空
+            </Button>
+          )}
+        </div>
         <div className="mt-2 flex gap-2">
           <Pill tone="info" active={historyFilter === "all"} onClick={() => setHistoryFilter("all")}>
             全部
@@ -69,6 +85,15 @@ export function HistorySidebar() {
                 onClick={() => toggleHistoryFavorite(item.id)}
               >
                 {item.favorite ? "★" : "☆"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 w-8 shrink-0 px-0 text-sm text-[var(--text-tertiary)] hover:text-red-500"
+                aria-label="删除"
+                onClick={() => removeHistoryItem(item.id)}
+              >
+                ×
               </Button>
             </div>
           ))

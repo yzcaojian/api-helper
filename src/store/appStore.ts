@@ -113,6 +113,8 @@ interface AppState {
   setSettingsOpen: (open: boolean) => void;
   setHistoryFilter: (filter: "all" | "favorites") => void;
   toggleHistoryFavorite: (id: string) => void;
+  removeHistoryItem: (id: string) => void;
+  clearHistory: () => void;
   applyHistoryItem: (item: HistoryItem) => void;
   setActiveEnvId: (id: string) => void;
   updateEnvVariable: (envId: string, key: string, value: string) => void;
@@ -270,6 +272,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         item.id === id ? { ...item, favorite: !item.favorite } : item,
       ),
     })),
+  removeHistoryItem: (id) =>
+    set((s) => ({
+      history: s.history.filter((item) => item.id !== id),
+    })),
+  clearHistory: () => set({ history: [] }),
   applyHistoryItem: (item) =>
     set({
       protocol: item.protocol,
