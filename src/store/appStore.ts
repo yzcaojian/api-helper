@@ -200,15 +200,14 @@ function buildWsUrl(baseUrl: string, params: KeyValue[], vars: Record<string, st
 
 function collectUsedIn(name: string, state: AppState): string[] {
   const places: string[] = [];
-  if (extractVariableNames(state.url).includes(name)) places.push("URL");
+  if (extractVariableNames(state.url).includes(name)) places.push("地址");
   for (const p of state.params) {
-    if (extractVariableNames(`${p.key}${p.value}`).includes(name)) places.push("Query");
+    if (extractVariableNames(`${p.key}${p.value}`).includes(name)) places.push("参数");
   }
   for (const h of state.headers) {
-    if (extractVariableNames(h.value).includes(name)) places.push("Header");
+    if (extractVariableNames(h.value).includes(name)) places.push("请求头");
   }
-  if (extractVariableNames(state.bodyContent).includes(name)) places.push("Body");
-  if (extractVariableNames(state.wsInput).includes(name)) places.push("消息");
+  if (extractVariableNames(state.bodyContent).includes(name)) places.push("请求体");
   return [...new Set(places)];
 }
 
@@ -254,7 +253,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loading: false,
   history: [],
   historyFilter: "all",
-  responseSplit: 45,
+  responseSplit: 38,
   wsStatus: "idle",
   wsError: null,
   wsSessionId: null,
@@ -282,7 +281,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       protocol: item.protocol,
       method: item.method ?? "GET",
       url: item.url,
-      configTab: item.protocol === "websocket" ? "headers" : item.method === "POST" ? "body" : "headers",
+      configTab: item.protocol === "websocket" ? "body" : item.method === "POST" ? "body" : "headers",
     }),
   setActiveEnvId: (id) => set({ activeEnvId: id }),
   updateEnvVariable: (envId, key, value) =>
@@ -425,13 +424,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   recordWsHistory: (status, error) => {
     const state = get();
+    const statusText = error ? `${status}：${error}` : status;
+    const existingIndex = state.history.findIndex(
+      (item) => item.protocol === "websocket" && item.url === state.url,
+    );
+
+    if (existingIndex >= 0) {
+      const next = [...state.history];
+      const existing = next[existingIndex];
+      next.splice(existingIndex, 1);
+      set({
+        history: [{ ...existing, status: statusText, time: formatTime() }, ...next],
+      });
+      return;
+    }
+
     set({
       history: [
         {
           id: crypto.randomUUID(),
           protocol: "websocket",
           url: state.url,
-          status: error ? `${status}: ${error}` : status,
+          status: statusText,
           time: formatTime(),
         },
         ...state.history.slice(0, 99),
@@ -439,18 +453,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
   setProtocol: (protocol) =>
-    set((s) => ({
-      protocol,
-      configTab: protocol === "websocket" ? "body" : s.configTab,
-      response: protocol === "websocket" ? null : s.response,
-      wsError: protocol === "http" ? null : s.wsError,
-      url:
-        protocol === "websocket" && s.url.includes("/get")
-          ? "wss://{{wsHost}}"
-          : protocol === "http" && (s.url.startsWith("ws") || s.url.startsWith("wss"))
-            ? "{{baseUrl}}/get"
-            : s.url,
-    })),
+    set((s) => {
+      const switchingToWs = protocol === "websocket" && s.protocol !== "websocket";
+      return {
+        protocol,
+        configTab: switchingToWs ? "body" : s.configTab,
+        response: protocol === "websocket" ? null : s.response,
+        wsError: protocol === "http" ? null : s.wsError,
+        url:
+          switchingToWs && (s.url.includes("/get") || s.url.startsWith("{{baseUrl}}"))
+            ? "wss://echo-websocket.hoppscotch.io"
+            : protocol === "http" && (s.url.startsWith("ws") || s.url.startsWith("wss"))
+              ? "{{baseUrl}}/get"
+              : s.url,
+        bodyContent: switchingToWs ? '{"message":"hello"}' : s.bodyContent,
+        bodyType: switchingToWs ? "json" : s.bodyType,
+        responseTab: switchingToWs ? "body" : s.responseTab,
+      };
+    }),
   setMethod: (method) =>
     set((s) => ({
       method,
@@ -509,7 +529,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       ...state.params.flatMap((p) => extractVariableNames(`${p.key}${p.value}`)),
       ...state.headers.flatMap((h) => extractVariableNames(h.value)),
       ...extractVariableNames(state.bodyContent),
-      ...extractVariableNames(state.wsInput),
     ]);
 
     return [...names].map((name) => ({
@@ -595,6 +614,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const sessionId = await wsConnect(ctx.resolvedUrl, ctx.headers);
       set({ wsSessionId: sessionId, wsStatus: "connected", loading: false, wsError: null });
+      get().recordWsHistory("已连接");
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const friendly = message.includes("200 OK")
@@ -618,9 +638,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   sendWebSocketMessage: async (text) => {
     const state = get();
-    const raw = (text ?? state.wsInput).trim();
+    const raw = (text ?? (state.bodyType === "none" ? "" : state.bodyContent)).trim();
     if (!raw) {
-      set({ wsError: "消息内容不能为空" });
+      set({ wsError: "请求体不能为空，请在「请求体」标签中填写内容" });
       return;
     }
     if (state.wsStatus !== "connected" || !state.wsSessionId) {
@@ -633,7 +653,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const message = substituteVariables(raw, variables);
     const missing = hasUnresolvedVariables(message, variables);
     if (missing.length > 0) {
-      set({ wsError: `未定义变量: ${[...new Set(missing)].join(", ")}` });
+      set({ wsError: `未定义变量：${[...new Set(missing)].join("、")}` });
       return;
     }
 
@@ -751,7 +771,10 @@ export const useAppStore = create<AppState>((set, get) => ({
               createKeyValue("X-Sign", "{{sign}}"),
             ],
       bodyType: snapshot.request.bodyType,
-      bodyContent: snapshot.request.bodyContent,
+      bodyContent:
+        snapshot.request.protocol === "websocket" && snapshot.request.wsInput
+          ? snapshot.request.wsInput
+          : snapshot.request.bodyContent,
       scriptEnabled: snapshot.request.scriptEnabled,
       scriptCode: snapshot.request.scriptCode || DEFAULT_SCRIPT,
       wsInput: snapshot.request.wsInput || '{"type":"ping"}',

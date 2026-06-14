@@ -19,7 +19,7 @@ export function RequestBar() {
   const wsConnected = wsStatus === "connected";
 
   return (
-    <div className="relative z-20 border-b border-border-subtle px-4 py-2.5">
+    <div className="relative z-20 border-b border-border-subtle px-4 py-2">
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={protocol}
@@ -45,17 +45,6 @@ export function RequestBar() {
           placeholder="输入 URL，支持 {{变量}}"
           className="h-9 min-w-[280px] flex-1 rounded-md border border-border bg-surface-elevated px-3 font-mono text-sm focus:border-accent focus:outline-none"
         />
-        {isWs && (
-          <span className="text-xs text-[var(--text-secondary)]">
-            {wsStatus === "connected"
-              ? "已连接"
-              : wsStatus === "connecting"
-                ? "连接中…"
-                : wsStatus === "error"
-                  ? "连接失败"
-                  : "未连接"}
-          </span>
-        )}
         {isWs && wsConnected ? (
           <>
             <Button variant="primary" onClick={() => void sendWebSocketMessage()}>

@@ -17,7 +17,6 @@ export function useWebSocketEvents() {
           setWsStatus(event.status as "connecting" | "connected" | "disconnected" | "error", event.message ?? null);
           if (event.status === "connected") {
             useAppStore.setState({ wsSessionId: event.session_id, loading: false });
-            useAppStore.getState().recordWsHistory("已连接");
           }
           if (event.status === "disconnected" || event.status === "error") {
             useAppStore.setState({ wsSessionId: null, loading: false });

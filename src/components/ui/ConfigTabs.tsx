@@ -1,25 +1,22 @@
 import type { ConfigTab } from "@/types";
 
 const TABS: Array<{ id: ConfigTab; label: string }> = [
-  { id: "params", label: "Params" },
-  { id: "headers", label: "Headers" },
-  { id: "body", label: "Body" },
-  { id: "script", label: "预执行脚本" },
-  { id: "variables", label: "变量预览" },
+  { id: "params", label: "参数" },
+  { id: "headers", label: "请求头" },
+  { id: "body", label: "请求体" },
+  { id: "script", label: "脚本" },
+  { id: "variables", label: "变量" },
 ];
 
 interface TabsProps {
   active: ConfigTab;
   onChange: (tab: ConfigTab) => void;
-  bodyLabel?: string;
 }
 
-export function ConfigTabs({ active, onChange, bodyLabel = "Body" }: TabsProps) {
-  const tabs = TABS.map((t) => (t.id === "body" ? { ...t, label: bodyLabel } : t));
-
+export function ConfigTabs({ active, onChange }: TabsProps) {
   return (
     <div className="flex border-b border-border-subtle px-4" role="tablist">
-      {tabs.map((tab) => {
+      {TABS.map((tab) => {
         const selected = active === tab.id;
         return (
           <button

@@ -12,8 +12,8 @@ interface KeyValueTableProps {
 export function KeyValueTable({
   rows,
   onChange,
-  keyLabel = "Key",
-  valueLabel = "Value",
+  keyLabel = "键",
+  valueLabel = "值",
 }: KeyValueTableProps) {
   const updateRow = (id: string, patch: Partial<KeyValue>) => {
     onChange(rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
