@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"Default capabilities for API Helper","local":true,"windows":["main"],"permissions":["core:default","store:default"]}}
+{"default":{"identifier":"default","description":"Default capabilities for API Helper","local":true,"windows":["main"],"permissions":["core:default","store:default","dialog:default","fs:default"]}}

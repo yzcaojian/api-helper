@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "API Helper",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "identifier": "com.apihelper.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -26,13 +26,25 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "nsis"],
+    "targets": ["nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": null,
+        "sidebarImage": null,
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"],
+        "displayLanguageSelector": false
+      }
+    },
+    "shortDescription": "轻量 API 调试工具",
+    "longDescription": "Windows 桌面 HTTP / WebSocket API 调试工具"
   }
 }

@@ -12,25 +12,30 @@ export function useWebSocketEvents() {
     let unlistenMessage: (() => void) | undefined;
 
     void (async () => {
-      unlistenStatus = await listenWsStatus((event) => {
-        setWsStatus(event.status, event.message ?? null);
-        if (event.status === "connected") {
-          useAppStore.setState({ wsSessionId: event.session_id, loading: false });
-        }
-        if (event.status === "disconnected" || event.status === "error") {
-          useAppStore.setState({ wsSessionId: null, loading: false });
-        }
-      });
-
-      unlistenMessage = await listenWsMessage((event) => {
-        appendWsMessage({
-          id: crypto.randomUUID(),
-          direction: event.direction,
-          content: event.content,
-          timestamp: event.timestamp,
-          time: formatTime(new Date(event.timestamp)),
+      try {
+        unlistenStatus = await listenWsStatus((event) => {
+          setWsStatus(event.status as "connecting" | "connected" | "disconnected" | "error", event.message ?? null);
+          if (event.status === "connected") {
+            useAppStore.setState({ wsSessionId: event.session_id, loading: false });
+            useAppStore.getState().recordWsHistory("已连接");
+          }
+          if (event.status === "disconnected" || event.status === "error") {
+            useAppStore.setState({ wsSessionId: null, loading: false });
+          }
         });
-      });
+
+        unlistenMessage = await listenWsMessage((event) => {
+          appendWsMessage({
+            id: crypto.randomUUID(),
+            direction: event.direction,
+            content: event.content,
+            timestamp: event.timestamp,
+            time: formatTime(new Date(event.timestamp)),
+          });
+        });
+      } catch (err) {
+        console.error("WebSocket event listener setup failed:", err);
+      }
     })();
 
     return () => {

@@ -31,7 +31,7 @@ body,
 }
 
 body {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   background: var(--surface);
   color: var(--text-primary);
 }

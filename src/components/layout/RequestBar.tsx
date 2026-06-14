@@ -1,6 +1,5 @@
 import { useAppStore } from "@/store/appStore";
 import { Button } from "@/components/ui/Button";
-import { Pill } from "@/components/ui/Pill";
 import { Select } from "@/components/ui/Select";
 
 export function RequestBar() {
@@ -12,32 +11,15 @@ export function RequestBar() {
   const setProtocol = useAppStore((s) => s.setProtocol);
   const setMethod = useAppStore((s) => s.setMethod);
   const setUrl = useAppStore((s) => s.setUrl);
-  const runScriptOnly = useAppStore((s) => s.runScriptOnly);
   const handlePrimaryAction = useAppStore((s) => s.handlePrimaryAction);
+  const sendWebSocketMessage = useAppStore((s) => s.sendWebSocketMessage);
+  const disconnectWebSocket = useAppStore((s) => s.disconnectWebSocket);
 
   const isWs = protocol === "websocket";
   const wsConnected = wsStatus === "connected";
 
-  const wsPillTone =
-    wsStatus === "connected"
-      ? "success"
-      : wsStatus === "connecting"
-        ? "info"
-        : wsStatus === "error"
-          ? "danger"
-          : "neutral";
-
-  const wsPillLabel =
-    wsStatus === "connected"
-      ? "已连接"
-      : wsStatus === "connecting"
-        ? "连接中"
-        : wsStatus === "error"
-          ? "错误"
-          : "未连接";
-
   return (
-    <div className="border-b border-border-subtle px-4 py-2.5">
+    <div className="relative z-20 border-b border-border-subtle px-4 py-2.5">
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={protocol}
@@ -63,21 +45,31 @@ export function RequestBar() {
           placeholder="输入 URL，支持 {{变量}}"
           className="h-9 min-w-[280px] flex-1 rounded-md border border-border bg-surface-elevated px-3 font-mono text-sm focus:border-accent focus:outline-none"
         />
-        {isWs && <Pill tone={wsPillTone}>{wsPillLabel}</Pill>}
-        <Button variant="secondary" onClick={() => void runScriptOnly()}>
-          运行脚本
-        </Button>
-        <Button variant="primary" disabled={loading && !wsConnected} onClick={() => void handlePrimaryAction()}>
-          {loading && !wsConnected
-            ? isWs
-              ? "连接中…"
-              : "请求中…"
-            : isWs
-              ? wsConnected
-                ? "断开"
-                : "连接"
-              : "发送"}
-        </Button>
+        {isWs && (
+          <span className="text-xs text-[var(--text-secondary)]">
+            {wsStatus === "connected"
+              ? "已连接"
+              : wsStatus === "connecting"
+                ? "连接中…"
+                : wsStatus === "error"
+                  ? "连接失败"
+                  : "未连接"}
+          </span>
+        )}
+        {isWs && wsConnected ? (
+          <>
+            <Button variant="primary" onClick={() => void sendWebSocketMessage()}>
+              发送
+            </Button>
+            <Button variant="secondary" onClick={() => void disconnectWebSocket()}>
+              断开
+            </Button>
+          </>
+        ) : (
+          <Button variant="primary" disabled={loading} onClick={() => void handlePrimaryAction()}>
+            {loading ? (isWs ? "连接中…" : "请求中…") : isWs ? "连接" : "发送"}
+          </Button>
+        )}
       </div>
     </div>
   );

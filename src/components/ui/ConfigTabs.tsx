@@ -11,11 +11,11 @@ const TABS: Array<{ id: ConfigTab; label: string }> = [
 interface TabsProps {
   active: ConfigTab;
   onChange: (tab: ConfigTab) => void;
-  hideBody?: boolean;
+  bodyLabel?: string;
 }
 
-export function ConfigTabs({ active, onChange, hideBody }: TabsProps) {
-  const tabs = hideBody ? TABS.filter((t) => t.id !== "body") : TABS;
+export function ConfigTabs({ active, onChange, bodyLabel = "Body" }: TabsProps) {
+  const tabs = TABS.map((t) => (t.id === "body" ? { ...t, label: bodyLabel } : t));
 
   return (
     <div className="flex border-b border-border-subtle px-4" role="tablist">
