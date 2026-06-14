@@ -27,7 +27,7 @@ export async function wsDisconnect(): Promise<void> {
 }
 
 export async function wsSend(sessionId: string, message: string): Promise<void> {
-  await invoke("ws_send", { session_id: sessionId, message });
+  await invoke("ws_send", { sessionId, message });
 }
 
 export function listenWsStatus(handler: (event: WsStatusEvent) => void): Promise<UnlistenFn> {

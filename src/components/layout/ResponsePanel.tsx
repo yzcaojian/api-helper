@@ -5,8 +5,8 @@ import { Pill } from "@/components/ui/Pill";
 import type { ResponseTab } from "@/types";
 
 const RESPONSE_TABS: Array<{ id: ResponseTab; label: string }> = [
-  { id: "body", label: "Body" },
-  { id: "headers", label: "Headers" },
+  { id: "body", label: "响应体" },
+  { id: "headers", label: "响应头" },
   { id: "log", label: "脚本日志" },
 ];
 
@@ -19,11 +19,13 @@ export function ResponsePanel() {
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center gap-3 border-y border-border-subtle bg-surface-editor/60 px-4 py-2">
-        <span className="text-sm font-semibold">Response</span>
+        <span className="text-sm font-semibold">响应</span>
         {response && !response.error && response.status > 0 && (
           <>
-            <Pill tone={statusTone(response.status)}>{response.status} {response.statusText}</Pill>
-            <span className="text-xs text-[var(--text-secondary)]">{response.durationMs} ms</span>
+            <Pill tone={statusTone(response.status)}>
+              {response.status} {response.statusText}
+            </Pill>
+            <span className="text-xs text-[var(--text-secondary)]">{response.durationMs} 毫秒</span>
             <span className="text-xs text-[var(--text-secondary)]">{formatBytes(response.sizeBytes)}</span>
           </>
         )}
@@ -56,7 +58,7 @@ export function ResponsePanel() {
                 </Button>
               </div>
             ) : (
-              <pre className="whitespace-pre-wrap break-all">{response.body || "(empty body)"}</pre>
+              <pre className="whitespace-pre-wrap break-all">{response.body || "（空）"}</pre>
             )}
           </>
         )}

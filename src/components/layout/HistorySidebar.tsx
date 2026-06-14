@@ -68,8 +68,16 @@ export function HistorySidebar() {
                 className="min-w-0 flex-1 p-2 text-left"
               >
                 <div className="flex items-center gap-2">
-                  <Pill tone={item.method === "GET" ? "success" : item.method === "POST" ? "warning" : "info"}>
-                    {item.method ?? "WS"}
+                  <Pill
+                    tone={
+                      item.protocol === "websocket"
+                        ? "info"
+                        : item.method === "GET"
+                          ? "success"
+                          : "warning"
+                    }
+                  >
+                    {item.protocol === "websocket" ? "长连" : item.method}
                   </Pill>
                   <span className="truncate text-sm">{item.url}</span>
                 </div>

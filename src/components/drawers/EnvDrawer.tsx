@@ -38,7 +38,7 @@ export function EnvDrawer() {
         <div className="space-y-2 border-b border-border-subtle bg-surface-editor/40 px-4 py-3 text-xs text-[var(--text-secondary)]">
           <p>
             <strong>环境有什么用？</strong> 同一套接口在开发 / 测试 / 生产使用不同域名、密钥等。
-            在 URL、Headers、Body 里写 <code className="font-mono">{"{{baseUrl}}"}</code> 会自动替换为当前环境的值。
+            在 URL、请求头、请求体里写 <code className="font-mono">{"{{baseUrl}}"}</code> 会自动替换为当前环境的值。
           </p>
           <p>脚本中通过 <code className="font-mono">env.get("key")</code> 读取。导入/导出请使用顶部「导入 / 导出」菜单。</p>
         </div>
